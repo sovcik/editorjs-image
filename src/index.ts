@@ -37,6 +37,7 @@ import Uploader from './uploader';
 
 import { IconAddBorder, IconStretch, IconAddBackground, IconPicture, IconText } from '@codexteam/icons';
 import type { ActionConfig, UploadResponseFormat, ImageToolData, ImageConfig, HTMLPasteEventDetailExtended, ImageSetterParam, FeaturesConfig } from './types/types';
+import { IconRotate } from './IconRotate';
 
 type ImageToolConstructorOptions = BlockToolConstructorOptions<ImageToolData, ImageConfig>;
 
@@ -143,6 +144,7 @@ export default class ImageTool implements BlockTool {
       withBorder: false,
       withBackground: false,
       stretched: false,
+      rotate: 0,
       file: {
         url: '',
       },
@@ -192,6 +194,12 @@ export default class ImageTool implements BlockTool {
         title: 'With background',
         toggle: true,
       },
+            {
+        name: 'rotate',
+        icon: IconRotate,
+        title: 'Rotate',
+        toggle: false,       
+      },
     ];
   }
 
@@ -240,6 +248,7 @@ export default class ImageTool implements BlockTool {
       background: 'withBackground',
       stretch: 'stretched',
       caption: 'caption',
+      rotate:'rotate'
     };
 
     if (this.config.features?.caption === 'optional') {
@@ -297,6 +306,14 @@ export default class ImageTool implements BlockTool {
         if (tune.name === 'caption') {
           this.isCaptionEnabled = !(this.isCaptionEnabled ?? false);
           newState = this.isCaptionEnabled;
+        }
+
+        if (tune.name === 'rotate') {
+          // For rotate, we don't toggle state but just perform the action
+          this.ui.nodes.imageEl?.style.setProperty('transform', `rotate(${(this.data.rotate || 0) + 90}deg)`);
+          this.data.rotate = (this.data.rotate || 0) + 90;
+          this.block.dispatchChange();
+          return;
         }
 
         this.tuneToggled(tune.name as keyof ImageToolData, newState);

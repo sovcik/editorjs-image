@@ -89,6 +89,11 @@ export type ImageToolData<Actions = {}, AdditionalFileData = {}> = {
   stretched: boolean;
 
   /**
+   * Rotation angle of the image in degrees.
+   */
+  rotate: number;
+
+  /**
    * Object containing the URL of the image file.
    * Also can contain any additional data.
    */
