@@ -40,7 +40,7 @@ export interface ActionConfig {
    * An optional action function to be executed when the tune is activated.
    */
   action?: Function;
-};
+}
 
 /**
  * UploadResponseFormat interface representing the response format expected from the backend on file uploading.
@@ -71,27 +71,32 @@ export type ImageToolData<Actions = {}, AdditionalFileData = {}> = {
   /**
    * Caption for the image.
    */
-  caption: string;
+  caption?: string;
 
   /**
    * Flag indicating whether the image has a border.
    */
-  withBorder: boolean;
+  withBorder?: boolean;
 
   /**
    * Flag indicating whether the image has a background.
    */
-  withBackground: boolean;
+  withBackground?: boolean;
 
   /**
    * Flag indicating whether the image is stretched.
    */
-  stretched: boolean;
+  stretched?: boolean;
 
   /**
    * Rotation angle of the image in degrees.
    */
-  rotate: number;
+  rotation: number;
+
+  /**
+   * Annotation SVG string for the image.
+   */
+  annotation?: string;
 
   /**
    * Object containing the URL of the image file.
@@ -137,7 +142,6 @@ export interface ImageConfig {
    * Endpoints for upload, whether using file or URL.
    */
   endpoints: {
-
     /**
      * Endpoint for file upload.
      */
@@ -183,7 +187,6 @@ export interface ImageConfig {
    * Optional custom uploader.
    */
   uploader?: {
-
     /**
      * Method to upload an image by file.
      */
@@ -231,3 +234,18 @@ export type ImageSetterParam = {
    */
   url: string;
 };
+
+export const COLORS_ARRAY = ['col1', 'col2', 'col3', 'col4', 'col5'] as const;
+export const COLORS: Record<(typeof COLORS_ARRAY)[number], string> = {
+  col1: '#FF0000',
+  col2: '#00FFFF',
+  col3: '#FFFF00',
+  col4: '#00FF00',
+  col5: '#FFFFFF',
+};
+
+export const LINE_WIDTHS = [1, 3, 5, 10, 20];
+
+// Default dimensions for SVG viewBox when image dimensions are not available
+export const DEFAULT_SVG_WIDTH = 800;
+export const DEFAULT_SVG_HEIGHT = 600;

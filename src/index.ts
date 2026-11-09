@@ -29,15 +29,34 @@
  */
 
 import type { TunesMenuConfig } from '@editorjs/editorjs/types/tools';
-import type { API, ToolboxConfig, PasteConfig, BlockToolConstructorOptions, BlockTool, BlockAPI, PasteEvent, PatternPasteEventDetail, FilePasteEventDetail } from '@editorjs/editorjs';
+import type {
+  API,
+  ToolboxConfig,
+  PasteConfig,
+  BlockToolConstructorOptions,
+  BlockTool,
+  BlockAPI,
+  PasteEvent,
+  PatternPasteEventDetail,
+  FilePasteEventDetail,
+} from '@editorjs/editorjs';
 import './index.css';
 
 import Ui from './ui';
 import Uploader from './uploader';
 
 import { IconAddBorder, IconStretch, IconAddBackground, IconPicture, IconText } from '@codexteam/icons';
-import type { ActionConfig, UploadResponseFormat, ImageToolData, ImageConfig, HTMLPasteEventDetailExtended, ImageSetterParam, FeaturesConfig } from './types/types';
+import type {
+  ActionConfig,
+  UploadResponseFormat,
+  ImageToolData,
+  ImageConfig,
+  HTMLPasteEventDetailExtended,
+  ImageSetterParam,
+  FeaturesConfig,
+} from './types/types';
 import { IconRotate } from './IconRotate';
+import { IconAnnotate } from './IconAnnotate';
 
 type ImageToolConstructorOptions = BlockToolConstructorOptions<ImageToolData, ImageConfig>;
 
@@ -144,7 +163,8 @@ export default class ImageTool implements BlockTool {
       withBorder: false,
       withBackground: false,
       stretched: false,
-      rotate: 0,
+      rotation: 0,
+      annotation: '',
       file: {
         url: '',
       },
@@ -194,11 +214,17 @@ export default class ImageTool implements BlockTool {
         title: 'With background',
         toggle: true,
       },
-            {
-        name: 'rotate',
+      {
+        name: 'rotation',
         icon: IconRotate,
         title: 'Rotate',
-        toggle: false,       
+        toggle: false,
+      },
+      {
+        name: 'annotation',
+        icon: IconAnnotate,
+        title: 'Annotatate',
+        toggle: false,
       },
     ];
   }
@@ -207,7 +233,11 @@ export default class ImageTool implements BlockTool {
    * Renders Block content
    */
   public render(): HTMLDivElement {
-    if (this.config.features?.caption === true || this.config.features?.caption === undefined || (this.config.features?.caption === 'optional' && this.data.caption)) {
+    if (
+      this.config.features?.caption === true ||
+      this.config.features?.caption === undefined ||
+      (this.config.features?.caption === 'optional' && this.data.caption)
+    ) {
       this.isCaptionEnabled = true;
       this.ui.applyTune('caption', true);
     }
@@ -243,12 +273,14 @@ export default class ImageTool implements BlockTool {
     // Merge default tunes with the ones that might be added by user
     // @see https://github.com/editor-js/image/pull/49
     const tunes = ImageTool.tunes.concat(this.config.actions || []);
+
+    // Map feature keys to tune names
     const featureTuneMap: Record<string, string> = {
       border: 'withBorder',
       background: 'withBackground',
       stretch: 'stretched',
       caption: 'caption',
-      rotate:'rotate'
+      rotation: 'rotation',
     };
 
     if (this.config.features?.caption === 'optional') {
@@ -261,7 +293,7 @@ export default class ImageTool implements BlockTool {
     }
 
     const availableTunes = tunes.filter((tune) => {
-      const featureKey = Object.keys(featureTuneMap).find(key => featureTuneMap[key] === tune.name);
+      const featureKey = Object.keys(featureTuneMap).find((key) => featureTuneMap[key] === tune.name);
 
       if (featureKey === 'caption') {
         return this.config.features?.caption !== false;
@@ -284,7 +316,7 @@ export default class ImageTool implements BlockTool {
       return currentState;
     };
 
-    return availableTunes.map(tune => ({
+    return availableTunes.map((tune) => ({
       icon: tune.icon,
       label: this.api.i18n.t(tune.title),
       name: tune.name,
@@ -308,10 +340,14 @@ export default class ImageTool implements BlockTool {
           newState = this.isCaptionEnabled;
         }
 
-        if (tune.name === 'rotate') {
+        if (tune.name === 'rotation') {
           // For rotate, we don't toggle state but just perform the action
-          this.ui.nodes.imageEl?.style.setProperty('transform', `rotate(${(this.data.rotate || 0) + 90}deg)`);
-          this.data.rotate = (this.data.rotate || 0) + 90;
+          const degrees = 90;
+          const maxRotation = 360;
+          // this.ui.nodes.imageEl?.style.setProperty('transform', `rotate(${(this.data.rotation || 0) + degrees}deg)`);
+          const newRotation = ((this.data.rotation || 0) + degrees) % maxRotation;
+          this.ui.applyRotation(newRotation);
+          this.data.rotation = newRotation;
           this.block.dispatchChange();
           return;
         }
@@ -408,14 +444,13 @@ export default class ImageTool implements BlockTool {
    * @param data - data in Image Tool format
    */
   private set data(data: ImageToolData) {
-    this.image = data.file;
-
     this._data.caption = data.caption || '';
     this.ui.fillCaption(this._data.caption);
+    this.ui.annotation = data.annotation || '';
+    this.image = data.file;
 
     ImageTool.tunes.forEach(({ name: tune }) => {
-      const value = typeof data[tune as keyof ImageToolData] !== 'undefined' ? data[tune as keyof ImageToolData] === true || data[tune as keyof ImageToolData] === 'true' : false;
-
+      const value = data[tune as keyof ImageToolData];
       this.setTune(tune as keyof ImageToolData, value);
     });
 
@@ -497,17 +532,26 @@ export default class ImageTool implements BlockTool {
    * @param tuneName - {@link Tunes.tunes}
    * @param value - tune state
    */
-  private setTune(tuneName: keyof ImageToolData, value: boolean): void {
-    (this._data[tuneName] as boolean) = value;
+  private setTune(tuneName: keyof ImageToolData, value: any): void {
+    if (tuneName === 'caption' && typeof value === 'string') {
+      this._data.caption = value;
+    } else if (tuneName === 'rotation' && typeof value === 'number') {
+      this._data.rotation = value;
+    } else if (tuneName === 'annotation' && typeof value === 'string') {
+      this._data.annotation = value;
+    } else {
+      (this._data[tuneName] as boolean) = Boolean(value);
+    }
 
-    this.ui.applyTune(tuneName, value);
+    this.ui.applyTune(tuneName, !!value);
     if (tuneName === 'stretched') {
       /**
        * Wait until the API is ready
        */
-      Promise.resolve().then(() => {
-        this.block.stretched = value;
-      })
+      Promise.resolve()
+        .then(() => {
+          this.block.stretched = !!value;
+        })
         .catch((err) => {
           console.error(err);
         });

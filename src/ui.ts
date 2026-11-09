@@ -7,54 +7,40 @@ import type { ImageConfig } from './types/types';
  * Enumeration representing the different states of the UI.
  */
 export enum UiState {
-  /**
-   * The UI is in an empty state, with no image loaded or being selected.
-   */
+  /** The UI is in an empty state, with no image loaded or being selected. */
   Empty = 'empty',
-
-  /**
-   * The UI is in an uploading state, indicating an image is currently being uploaded.
-   */
+  /** The UI is in an uploading state, indicating an image is currently being uploaded. */
   Uploading = 'uploading',
-
-  /**
-   * The UI is in a filled state, with an image successfully loaded.
-   */
-  Filled = 'filled'
-};
+  /** The UI is in a filled state, with an image successfully loaded. */
+  Filled = 'filled',
+}
 
 /**
  * Nodes interface representing various elements in the UI.
  */
 interface Nodes {
-  /**
-   * Wrapper element in the UI.
-   */
+  /** Wrapper element in the UI (contains image container, caption, and file button) */
   wrapper: HTMLElement;
 
-  /**
-   * Container for the image element in the UI.
-   */
+  /** Container for the image + preloader */
   imageContainer: HTMLElement;
 
-  /**
-   * Button for selecting files.
-   */
+  /** Canvas for the image element + annotation */
+  imageCanvas: HTMLElement;
+
+  /** Represents the image element in the UI */
+  imageEl?: HTMLImageElement | HTMLVideoElement;
+
+  /** Represents the annotation element in the UI */
+  annotationEl: HTMLElement;
+
+  /** Button for selecting files. */
   fileButton: HTMLElement;
 
-  /**
-   * Represents the image element in the UI, if one is present; otherwise, it's undefined.
-   */
-  imageEl?: HTMLElement;
-
-  /**
-   * Preloader element for the image.
-   */
+  /** Preloader element for the image. */
   imagePreloader: HTMLElement;
 
-  /**
-   * Caption element for the image.
-   */
+  /** Caption element for the image. */
   caption: HTMLElement;
 }
 
@@ -62,21 +48,13 @@ interface Nodes {
  * ConstructorParams interface representing parameters for the Ui class constructor.
  */
 interface ConstructorParams {
-  /**
-   * Editor.js API.
-   */
+  /** Editor.js API. */
   api: API;
-  /**
-   * Configuration for the image.
-   */
+  /** Configuration for the image. */
   config: ImageConfig;
-  /**
-   * Callback function for selecting a file.
-   */
+  /** Callback function for selecting a file. */
   onSelectFile: () => void;
-  /**
-   * Flag indicating if the UI is in read-only mode.
-   */
+  /** Flag indicating if the UI is in read-only mode. */
   readOnly: boolean;
 }
 
@@ -87,37 +65,24 @@ interface ConstructorParams {
  *  - apply tune view
  */
 export default class Ui {
-  /**
-   * Nodes representing various elements in the UI.
-   */
+  /** Nodes representing various elements in the UI. */
   public nodes: Nodes;
 
-  /**
-   * API instance for Editor.js.
-   */
+  /** API instance for Editor.js. */
   private api: API;
 
-  /**
-   * Configuration for the image tool.
-   */
+  /** Configuration for the image tool. */
   private config: ImageConfig;
 
-  /**
-   * Callback function for selecting a file.
-   */
+  /** Callback function for selecting a file. */
   private onSelectFile: () => void;
 
-  /**
-   * Flag indicating if the UI is in read-only mode.
-   */
+  /** Flag indicating if the UI is in read-only mode. */
   private readOnly: boolean;
 
   /**
-   * @param ui - image tool Ui module
-   * @param ui.api - Editor.js API
-   * @param ui.config - user config
-   * @param ui.onSelectFile - callback for clicks on Select file button
-   * @param ui.readOnly - read-only mode flag
+   * Constructor for the Ui class.
+   * @param params - parameters for constructing the Ui instance.
    */
   constructor({ api, config, onSelectFile, readOnly }: ConstructorParams) {
     this.api = api;
@@ -127,8 +92,10 @@ export default class Ui {
     this.nodes = {
       wrapper: make('div', [this.CSS.baseClass, this.CSS.wrapper]),
       imageContainer: make('div', [this.CSS.imageContainer]),
-      fileButton: this.createFileButton(),
+      imageCanvas: make('div', [this.CSS.imageCanvas]),
       imageEl: undefined,
+      annotationEl: make('div', [this.CSS.annotation]),
+      fileButton: this.createFileButton(),
       imagePreloader: make('div', this.CSS.imagePreloader),
       caption: make('div', [this.CSS.input, this.CSS.caption], {
         contentEditable: !this.readOnly,
@@ -140,12 +107,19 @@ export default class Ui {
      *  <wrapper>
      *    <image-container>
      *      <image-preloader />
+     *      <image-canvas>
+     *       <image />
+     *       <annotation />
+     *      </image-canvas>
      *    </image-container>
      *    <caption />
      *    <select-file-button />
      *  </wrapper>
      */
     this.nodes.caption.dataset.placeholder = this.config.captionPlaceholder;
+
+    this.nodes.imageCanvas.appendChild(this.nodes.annotationEl);
+    this.nodes.imageContainer.appendChild(this.nodes.imageCanvas);
     this.nodes.imageContainer.appendChild(this.nodes.imagePreloader);
     this.nodes.wrapper.appendChild(this.nodes.imageContainer);
     this.nodes.wrapper.appendChild(this.nodes.caption);
@@ -158,7 +132,28 @@ export default class Ui {
    * @param status - true for enable, false for disable
    */
   public applyTune(tuneName: string, status: boolean): void {
+    const notSupportedTunes = ['rotation', 'annotation'];
+    if (notSupportedTunes.includes(tuneName)) {
+      return;
+    }
     this.nodes.wrapper.classList.toggle(`${this.CSS.wrapper}--${tuneName}`, status);
+  }
+
+  public applyRotation(degree: number): void {
+    this.nodes.imageCanvas.style.setProperty('transform', `rotate(${degree}deg)`);
+    // this.nodes.imageEl!.style.setProperty('transform', `rotate(${degree}deg)`);
+    // this.nodes.annotation.style.setProperty('transform', `rotate(${degree}deg)`);
+    const width = degree == 90 || degree == 270 ? this.nodes.imageEl!.clientWidth : this.nodes.imageEl!.clientHeight;
+    this.nodes.imageContainer.style.setProperty('height', width + 'px');
+  }
+
+  /**
+   * Set the innerHTML of the container to the provided SVG string
+   * @param svgString - SVG content as a string
+   */
+  public set annotation(svgString: string) {
+    this.nodes.annotationEl.innerHTML = svgString;
+    this.resizeAnnotationContainer();
   }
 
   /**
@@ -200,6 +195,8 @@ export default class Ui {
 
     const attributes: { [key: string]: string | boolean } = {
       src: url,
+      //width: '100%',
+      //height: '100%',
     };
 
     /**
@@ -230,7 +227,24 @@ export default class Ui {
     /**
      * Compose tag with defined attributes
      */
-    this.nodes.imageEl = make(tag, this.CSS.imageEl, attributes);
+    if (tag === 'VIDEO') {
+      this.nodes.imageEl = make('video', this.CSS.imageEl, attributes) as HTMLVideoElement;
+    } else {
+      const i = new Image();
+      i.src = url;
+      i.onload = () => {
+        const container = this.nodes.imageCanvas;
+        const ratio = i.width / i.height;
+        console.log('Image loaded width=', i.width, 'height=', i.height, i.src);
+        console.log('Container width=', container.offsetWidth);
+        // i.width = container.offsetWidth;
+        // i.height = container.offsetWidth / ratio;
+        // this.nodes.imageCanvas?.setAttribute('style', `width: ${i.width}px; height: ${i.height}px;`);
+      };
+
+      this.nodes.imageEl = make(i, this.CSS.imageEl, attributes) as HTMLImageElement;
+      this.resizeAnnotationContainer();
+    }
 
     /**
      * Add load event listener
@@ -246,7 +260,7 @@ export default class Ui {
       }
     });
 
-    this.nodes.imageContainer.appendChild(this.nodes.imageEl);
+    this.nodes.imageCanvas.appendChild(this.nodes.imageEl);
   }
 
   /**
@@ -274,6 +288,18 @@ export default class Ui {
   }
 
   /**
+   * Resize annotation container to match image dimensions
+   */
+  private resizeAnnotationContainer(): void {
+    const image = this.nodes.imageEl as HTMLImageElement | HTMLVideoElement;
+
+    if (image && this.nodes.annotationEl) {
+      this.nodes.annotationEl.style.width = `${image.width}px`;
+      this.nodes.annotationEl.style.height = `${image.height}px`;
+    }
+  }
+
+  /**
    * CSS classes
    */
   private get CSS(): Record<string, string> {
@@ -283,29 +309,26 @@ export default class Ui {
       input: this.api.styles.input,
       button: this.api.styles.button,
 
-      /**
-       * Tool's classes
-       */
       wrapper: 'image-tool',
       imageContainer: 'image-tool__image',
+      imageCanvas: 'image-tool__image-canvas',
+      imageWrapper: 'image-tool__image-wrapper',
       imagePreloader: 'image-tool__image-preloader',
       imageEl: 'image-tool__image-picture',
+      annotation: 'image-tool__image-annotation',
       caption: 'image-tool__caption',
     };
-  };
+  }
 
   /**
    * Creates upload-file button
    */
   private createFileButton(): HTMLElement {
     const button = make('div', [this.CSS.button]);
-
     button.innerHTML = this.config.buttonContent ?? `${IconPicture} ${this.api.i18n.t('Select an Image')}`;
-
     button.addEventListener('click', () => {
       this.onSelectFile();
     });
-
     return button;
   }
 }

@@ -5,8 +5,12 @@
  * @param attributes        - any attributes
  * @returns
  */
-export function make(tagName: string, classNames: string[] | string | null = null, attributes: { [key: string]: string | boolean } = {}): HTMLElement {
-  const el = document.createElement(tagName);
+export function make(
+  tagName: string | HTMLElement,
+  classNames: string[] | string | null = null,
+  attributes: { [key: string]: string | boolean } = {}
+): HTMLElement {
+  const el = typeof tagName === 'string' ? document.createElement(tagName) : tagName;
 
   if (Array.isArray(classNames)) {
     el.classList.add(...classNames);

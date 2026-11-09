@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -9,23 +9,28 @@
     <div id="editorjs"></div>
     <script src="https://cdn.jsdelivr.net/npm/@editorjs/editorjs@latest"></script>
     <script type="module">
-      import ImageTool from "../src/index.ts";
+      import ImageTool from '../src/index.ts';
       const editor = new EditorJS({
-        holder: "editorjs",
+        holder: 'editorjs',
         data: {
           time: 1700475383740,
           blocks: [
+            { id: 'yU6y8j4M6D', type: 'paragraph', data: { text: 'Hello from Editor.js' } },
+            { id: 'lR3D3mX3K5', type: 'paragraph', data: { text: 'This is image tool demo' } },
             {
-              id: "hZAjSnqYMX",
-              type: "image",
+              id: 'hZAjSnqYMX',
+              type: 'image',
               data: {
                 file: {
-                  url: "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?q=80&w=1974&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+                  url: 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?q=80&w=1974&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
                 },
                 withBorder: false,
                 withBackground: false,
                 stretched: false,
-                caption: "kimitsu no yayiba",
+                caption: 'kimitsu no yayiba',
+                rotation: 180,
+                annotation:
+                  "<svg xmlns='http://www.w3.org/2000/svg' width='100%' height='100%'><circle cx='50' cy='50' r='40' stroke='green' stroke-width='4' fill='yellow' /></svg>",
               },
             },
           ],
@@ -36,14 +41,16 @@
             class: ImageTool,
             config: {
               endpoints: {
-                byFile: "http://localhost:8008/uploadFile",
-                byUrl: "http://localhost:8008/fetchUrl",
+                byFile: 'http://localhost:8008/uploadFile',
+                byUrl: 'http://localhost:8008/fetchUrl',
               },
               features: {
-                caption: "optional",
+                caption: 'optional',
                 border: false,
                 background: false,
                 stretch: true,
+                rotation: true,
+                annotation: true,
               },
             },
           },
